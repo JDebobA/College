@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Магазин</title>
+</head>
+<body>
+    <script>
+        // Класс для пользователя
+        class User {
+            constructor(id, name, role, password) {
+                this.id = id;
+                this.name = name;
+                this.role = role; // 'admin' или 'user'
+                this.password = password;
+            }
+        }
+
+        // Класс для хранения пользователей
+        class UserStorage {
+            constructor() {
+                this.users = []; // массив для хранения пользователей
+            }
+        }
+
+        // Класс с сообщениями об ошибках
+        class Consts {
+            static UserExistsException = "Пользователь с таким именем уже есть";
+            static UserNotFoundException = "Пользователь не найден";
+            static PasswordsNotMatchException = "Пароли не совпадают";
+            static PermissionException = "Нет прав для этого действия";
+            static ProductExistsException = "Такой товар уже есть";
+            static ProductNotFoundException = "Товар не найден";
+        }
+
+        // Класс для работы с пользователями
+        class UserService {
+            constructor() {
+                this.userStorage = new UserStorage();
+            }
+
+            // Регистрация администратора
+            signupAdmin(name, password) {
+                if(this.isExistsUserByName(name)) {
+                    alert(Consts.UserExistsException);
+                    return null;
+                }
+                
+                let newUser = new User(this.userStorage.users.length + 1, name, "admin", password);
+                this.userStorage.users.push(newUser);
+                return newUser;
+            }
+
+            // Проверка есть ли пользователь с таким именем
+            isExistsUserByName(name) {
+                for(let i = 0; i < this.userStorage.users.length; i++) {
+                    if(this.userStorage.users[i].name === name) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            // Обычная регистрация
+            signup(name, password) {
+                if(this.isExistsUserByName(name)) {
+                    alert(Consts.UserExistsException);
+                    return null;
+                }
+
+                let newUser = new User(this.userStorage.users.length + 1, name, "user", password);
+                this.userStorage.users.push(newUser);
+                return newUser;
+            }
+
+            // Вход в систему
+            signin(name, password) {
+                let foundUser = null;
+                
+                // Ищем пользователя
+                for(let i = 0; i < this.userStorage.users.length; i++) {
+                    if(this.userStorage.users[i].name === name) {
+                        foundUser = this.userStorage.users[i];
+                        break;
+                    }
+                }
+
+                if(foundUser === null) {
+                    alert(Consts.UserNotFoundException);
+                    return null;
+                }
+
+                if(foundUser.password === password) {
+                    return foundUser;
+                } else {
+                    alert(Consts.PasswordsNotMatchException);
+                    return null;
+                }
+            }
+        }
+
+        // Класс для товара
+        class Product {
+            constructor(id, name, price, category) {
+                this.id = id;
+                this.name = name;
+                this.price = price;
+                this.category = category;
+                this.reviews = []; // массив для отзывов
+                this.rating = 0; // средняя оценка
+            }
+        }
+
+        // Класс для отзыва
+        class Review {
+            constructor(userId, userName, text, rating) {
+                this.userId = userId;
+                this.userName = userName;
+                this.text = text;
+                this.rating = rating; // от 1 до 5
+            }
+        }
+
+        // Класс для хранения товаров
+        class ProductStorage {
+            constructor() {
+                this.products = []; // массив товаров
+            }
+        }
+
+        // Класс для работы с товарами
+        class ProductService {
+            constructor() {
+                this.productStorage = new ProductStorage();
+                this.categories = []; // массив категорий
+            }
+
+            // Создание товара (только для админа)
+            createProduct(name, quantity, price, category, user) {
+                if(user === null) {
+                    alert("Нужно войти в систему");
+                    return null;
+                }
+
+                if(user.role !== 'admin') {
+                    alert(Consts.PermissionException);
+                    return null;
+                }
+
+                // Проверяем есть ли уже такой товар
+                for(let i = 0; i < this.productStorage.products.length; i++) {
+                    if(this.productStorage.products[i].name === name) {
+                        alert(Consts.ProductExistsException);
+                        return null;
+                    }
+                }
+
+                let newProduct = new Product(this.productStorage.products.length + 1, name, price, category);
+                this.productStorage.products.push(newProduct);
+                
+                // Добавляем категорию если её нет
+                this.addCategory(category);
+                
+                return newProduct;
+            }
+
+            // Добавление категории
+            addCategory(category) {
+                if(!this.categories.includes(category)) {
+                    this.categories.push(category);
+                }
+            }
+
+            // Получение всех категорий
+            getCategories() {
+                return this.categories;
+            }
+
+            // Изменение цены товара
+            updateProductPrice(productName, newPrice, user) {
+                if(user === null || user.role !== 'admin') {
+                    alert(Consts.PermissionException);
+                    return false;
+                }
+
+                let product = this.findProductByName(productName);
+                if(product === null) {
+                    alert(Consts.ProductNotFoundException);
+                    return false;
+                }
+
+                product.price = newPrice;
+                return true;
+            }
+
+            // Поиск товара по имени
+            findProductByName(name) {
+                for(let i = 0; i < this.productStorage.products.length; i++) {
+                    if(this.productStorage.products[i].name === name) {
+                        return this.productStorage.products[i];
+                    }
+                }
+                return null;
+            }
+
+            // Удаление товара
+            deleteProduct(productName, user) {
+                if(user === null || user.role !== 'admin') {
+                    alert(Consts.PermissionException);
+                    return false;
+                }
+
+                for(let i = 0; i < this.productStorage.products.length; i++) {
+                    if(this.productStorage.products[i].name === productName) {
+                        this.productStorage.products.splice(i, 1);
+                        return true;
+                    }
+                }
+
+                alert(Consts.ProductNotFoundException);
+                return false;
+            }
+
+            // Поиск товаров
+            searchProducts(searchText) {
+                let foundProducts = [];
+                
+                for(let i = 0; i < this.productStorage.products.length; i++) {
+                    let product = this.productStorage.products[i];
+                    if(product.name.toLowerCase().includes(searchText.toLowerCase())) {
+                        foundProducts.push(product);
+                    }
+                }
+                
+                return foundProducts;
+            }
+
+            // Получение товаров по категории
+            getProductsByCategory(category) {
+                let categoryProducts = [];
+                
+                for(let i = 0; i < this.productStorage.products.length; i++) {
+                    let product = this.productStorage.products[i];
+                    if(product.category === category) {
+                        categoryProducts.push(product);
+                    }
+                }
+                
+                return categoryProducts;
+            }
+
+            // Добавление отзыва
+            addReview(productName, userId, userName, text, rating) {
+                let product = this.findProductByName(productName);
+                if(product === null) {
+                    alert(Consts.ProductNotFoundException);
+                    return null;
+                }
+
+                let newReview = new Review(userId, userName, text, rating);
+                product.reviews.push(newReview);
+                
+                // Обновляем средний рейтинг
+                this.updateRating(product);
+                
+                return newReview;
+            }
+
+            // Обновление рейтинга товара
+            updateRating(product) {
+                if(product.reviews.length === 0) {
+                    product.rating = 0;
+                    return;
+                }
+
+                let total = 0;
+                for(let i = 0; i < product.reviews.length; i++) {
+                    total += product.reviews[i].rating;
+                }
+                
+                product.rating = (total / product.reviews.length).toFixed(1);
+            }
+
+            // Получение отзывов товара
+            getProductReviews(productName) {
+                let product = this.findProductByName(productName);
+                if(product === null) {
+                    return [];
+                }
+                return product.reviews;
+            }
+
+            // Фильтрация товаров
+            filterProducts(sortType) {
+                let products = [...this.productStorage.products]; // копируем массив
+                
+                if(sortType === 'price_asc') {
+                    // Сортировка по цене (дешевые first)
+                    products.sort(function(a, b) {
+                        return a.price - b.price;
+                    });
+                } else if(sortType === 'price_desc') {
+                    // Сортировка по цене (дорогие first)
+                    products.sort(function(a, b) {
+                        return b.price - a.price;
+                    });
+                } else if(sortType === 'popular') {
+                    // Сортировка по рейтингу
+                    products.sort(function(a, b) {
+                        return b.rating - a.rating;
+                    });
+                }
+                
+                return products;
+            }
+        }
+
+        // Класс для заказа
+        class Order {
+            constructor(id, userId, products) {
+                this.id = id;
+                this.userId = userId;
+                this.date = new Date();
+                this.products = products; // массив товаров в заказе
+                this.totalPrice = this.calculateTotalPrice();
+            }
+
+            // Подсчет общей суммы заказа
+            calculateTotalPrice() {
+                let total = 0;
+                for(let i = 0; i < this.products.length; i++) {
+                    total += this.products[i].price * this.products[i].quantity;
+                }
+                return total;
+            }
+        }
+
+        // Класс для работы с заказами
+        class OrderService {
+            constructor() {
+                this.orders = []; // все заказы
+                this.nextOrderId = 1;
+            }
+
+            // Создание заказа
+            createOrder(userId, products) {
+                let newOrder = new Order(this.nextOrderId, userId, products);
+                this.orders.push(newOrder);
+                this.nextOrderId++;
+                return newOrder;
+            }
+
+            // Получение заказов пользователя
+            getUserOrders(userId) {
+                let userOrders = [];
+                
+                for(let i = 0; i < this.orders.length; i++) {
+                    if(this.orders[i].userId === userId) {
+                        userOrders.push(this.orders[i]);
+                    }
+                }
+                
+                return userOrders;
+            }
+
+            // Получение всех заказов
+            getAllOrders() {
+                return this.orders;
+            }
+        }
+    </script> 
+</body>
+</html>
