@@ -118,7 +118,7 @@
                 this.userId = userId;
                 this.userName = userName;
                 this.text = text;
-                this.rating = rating; // от 1 до 5
+                this.rating = rating;
             }
         }
 
@@ -220,34 +220,6 @@
 
                 alert(Consts.ProductNotFoundException);
                 return false;
-            }
-
-            // Поиск товаров
-            searchProducts(searchText) {
-                let foundProducts = [];
-                
-                for(let i = 0; i < this.productStorage.products.length; i++) {
-                    let product = this.productStorage.products[i];
-                    if(product.name.toLowerCase().includes(searchText.toLowerCase())) {
-                        foundProducts.push(product);
-                    }
-                }
-                
-                return foundProducts;
-            }
-
-            // Получение товаров по категории
-            getProductsByCategory(category) {
-                let categoryProducts = [];
-                
-                for(let i = 0; i < this.productStorage.products.length; i++) {
-                    let product = this.productStorage.products[i];
-                    if(product.category === category) {
-                        categoryProducts.push(product);
-                    }
-                }
-                
-                return categoryProducts;
             }
 
             // Добавление отзыва
@@ -362,11 +334,6 @@
                 }
                 
                 return userOrders;
-            }
-
-            // Получение всех заказов
-            getAllOrders() {
-                return this.orders;
             }
         }
     </script> 
