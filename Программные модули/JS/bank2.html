@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <Script>
+        // Генерация простого уникального идентификатора
+        function generateUUID() {
+            let hash = Math.random().toString(36).substr(2, 9);
+            alert(hash)
+            return  hash //Создаётся строчка длиной 9 символов, примерно 1 * 10^14 комбинаций
+        }
+
+        // Класс Transaction
+        class Transaction {
+            constructor(fromAccount, toAccount, amount, type) {
+                this.id = generateUUID(); // id транзакции
+                this.fromAccount = fromAccount; 
+                this.toAccount = toAccount;
+                this.amount = amount;
+                this.type = type; // Тип транзакции
+                this.timestamp = new Date(); // Время совершения транзакции
+            }
+        }
+
+        // Класс User
+        class User {
+            constructor(name, login, password) {
+                this.id = generateUUID(); //id пользователья
+                this.name = name;
+                this.login = login;
+                this.passwordHash = hashPassword(password, 'salt'); // Простое хэширование
+                this.accounts = []; // Массив счетов
+                this.transactions = []; // История транзакций
+            }
+
+            checkPassword(inputPassword) { //Проверка пароля
+                let hashedInput = hashPassword(inputPassword, 'salt');
+                return hashedInput === this.passwordHash;
+            }
+
+            createAccount(accountType) { //Создание аккаунта
+                const newAccount = new Account(generateUUID(), accountType, 0);
+                this.accounts.push(newAccount);
+                return newAccount;
+            }
+
+            findAccountById(accountId) { //поиск аккаунта
+                return this.accounts.find((account) => account.id === accountId);
+            }
+
+            addTransaction(transaction) { //
+                this.transactions.push(transaction);
+            }
+        }
+
+        // Класс Account
+        class Account {
+            constructor(id, type, balance) {
+                this.id = id;
+                this.type = type;
+                this.balance = balance;
+            }
+
+            deposit(amount) {
+                if(amount <= 0){
+                    throw new Error("Проблемы банкомата")
+                }
+                this.balance += amount;
+            }
+
+            withdraw(amount) {
+                if (amount <= 0) {
+                    throw new Error(`Сумма снятия меньше 0. amount = ${amount}`);
+                } else {
+                    this.balance += amount;
+                }
+            }
+
+            transferTo(targetAccount, amount) {
+                if (this.balance >= amount) {
+                    targetAccount.deposit(amount);
+                    try {
+                        
+                    this.withdraw(amount);
+                    }
+                    catch (error) {
+                        if (error instanceof NullBalanceException) {alert("Недостаточно средств")}
+                    }
+                } else {
+                    throw new Error("Недостаточно средств");
+                }
+            }
+        }
+
+        // Класс Bank
+        class Bank {
+            constructor() {
+                this.users = [];
+                this.currentUser = null;
+            }
+
+            registerUser(name, login, password) {
+                const user = new User(name, login, password);
+                this.users.push(user);
+                return user;
+            }
+
+            login(login, password) {
+                const foundUser = this.users.find((user) => user.login === login);
+                if (foundUser && foundUser.checkPassword(password)) {
+                    this.currentUser = foundUser;
+                } else {
+                    alert("Логин или пароль неверны!");
+                }
+            }
+
+            logout() {
+                this.currentUser = null;
+            }
+
+            listUsers() {
+                return this.users.map((u) => u.name);
+            }
+
+            performTransfer(fromAccountId, toUserLogin, toAccountId, amount) {
+                try {
+                    const senderAccount = this.currentUser.findAccountById(fromAccountId);
+                    const receiverUser = this.users.find((u) => u.login === toUserLogin);
+                    const receiverAccount = receiverUser.findAccountById(toAccountId);
+
+                    if (!senderAccount || !receiverAccount) {
+                        throw new Error("Ошибка перевода");
+                    }
+
+                    senderAccount.transferTo(receiverAccount, amount);
+
+                    // Создание транзакции и её сохранение
+                    const transaction = new Transaction(
+                        senderAccount.id,
+                        receiverAccount.id,
+                        amount,
+                        "transfer"
+                    );
+                    this.currentUser.addTransaction(transaction);
+                } catch (err) {
+                    alert(err.message);
+                }
+            }
+        }
+
+        // Функция хэширования паролей
+        function hashPassword(password, salt) {
+            return btoa(password + salt).split("").reverse().join("");
+        }
+
+        biba = new User("biba", "loginbiba", "1")
+
+        // Основной цикл приложения
+        const myBank = new Bank();
+        let isLoggedIn = false;
+
+        while (true) {
+            if (!isLoggedIn) {
+                let action = prompt("Выберите действие:\n1. Регистрация\n2. Вход\n3. Выход");
+                switch (action) {
+                    case "1":
+                        let name = prompt("Ваше имя:");
+                        let login = prompt("Ваш логин:");
+                        let password = prompt("Ваш пароль:");
+                        myBank.registerUser(name, login, password);
+                        break;
+
+                    case "2":
+                        let inputLogin = prompt("Введите ваш логин:");
+                        let inputPassword = prompt("Введите ваш пароль:");
+                        myBank.login(inputLogin, inputPassword);
+                        isLoggedIn = !!myBank.currentUser;
+                        break;
+
+                    case "3":
+                        alert("До свидания!");
+                        break;
+                }
+            } else {
+                let loggedAction = prompt("Выберите действие:\n1. Создать счёт\n2. Сделать перевод\n3. Посмотреть баланс\n4. Выйти из аккаунта");
+                switch (loggedAction) {
+                    case "1":
+                        let accountType = prompt("Какой тип счёта создать?");
+                        myBank.currentUser.createAccount(accountType);
+                        break;
+
+                    case "2":
+                        let fromAccountId = prompt("От какого счёта перевести деньги?");
+                        let toUserLogin = prompt("Логин получателя:");
+                        let toAccountId = prompt("Номер счёта получателя:");
+                        let amount = parseFloat(prompt("Сумма перевода:"));
+                        myBank.performTransfer(fromAccountId, toUserLogin, toAccountId, amount);
+                        break;
+
+                    case "3":
+                        let balanceInfo = "";
+                        myBank.currentUser.accounts.forEach((acc) => {
+                            balanceInfo += `${acc.type}: ${acc.balance}\n`;
+                        });
+                        alert(`Баланс ваших счетов:\n${balanceInfo}`);
+                        break;
+
+                    case "4":
+                        myBank.logout();
+                        isLoggedIn = false;
+                        break;
+                }
+            }
+        }
+    </Script>
+</body>
+</html>
